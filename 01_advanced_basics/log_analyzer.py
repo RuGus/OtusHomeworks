@@ -10,6 +10,7 @@ from statistics import mean, median
 import string
 import sys
 import logging
+import argparse
 
 # Default config
 config = {
@@ -290,22 +291,16 @@ class LogAnalyzer:
 
 def main():
     "Основная функция скрипта"
-    config_path = None
-
-    if len(sys.argv) == 1:
-        pass
-    else:
-        if len(sys.argv) > 3:
-            print("Ошибка. Слишком много параметров.")
-            sys.exit(1)
-        param_name = sys.argv[1]
-        param_value = sys.argv[2] if len(sys.argv) == 3 else None
-        if param_name == "--config" or param_name == "-c":
-            config_path = param_value if param_value else config["CONFIG_PATH"]
-        else:
-            print(f"Ошибка. Неизвестный параметр '{param_name}'")
-            sys.exit(1)
-
+    parser = argparse.ArgumentParser(description="Log analyzer for nginx")
+    parser.add_argument(
+        "--config",
+        nargs="?",
+        type=str,
+        const="config.ini",
+        help="Path to config file (Default: config.ini)",
+    )
+    args = parser.parse_args()
+    config_path = args.config if args.config else None
     analyzer = LogAnalyzer(config, config_path)
     try:
         analyzer.run()
