@@ -1,0 +1,12 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Tests
+        run: python test_log_analyzer.py
+        working-directory: ./01_advanced_basics
