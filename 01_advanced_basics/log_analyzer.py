@@ -141,7 +141,7 @@ class LogAnalyzer:
 
             self.log_sum_time += request_time
             self.log_strings_parsed += 1
-        except Exception as exc:
+        except AttributeError as exc:
             msg = str(exc)
             self.logger.error(f"Ошибка парсинга строки [{line}]: {msg}", exc_info=True)
             self.log_strings_error += 1
@@ -153,15 +153,9 @@ class LogAnalyzer:
             file_path (str): Путь к файлу логов.
         """
         self.logger.info(f"Старт обработки файла [{file_path}]")
-        try:
-            opener = gzip.open if file_path.endswith(".gz") else open
-            for line in opener(file_path, mode="rt", errors="ignore", encoding="utf8"):
-                self.process_line(line)
-        except Exception as exc:
-            msg = str(exc)
-            self.logger.error(
-                f"Ошибка парсинга файла [{file_path}]: {msg}", exc_info=True
-            )
+        opener = gzip.open if file_path.endswith(".gz") else open
+        for line in opener(file_path, mode="rt", errors="ignore", encoding="utf8"):
+            self.process_line(line)
         self.logger.info("Файл успешно обработан")
 
     @staticmethod
@@ -225,14 +219,14 @@ class LogAnalyzer:
             report_path = os.path.join(report_dir, report_name)
             self.logger.debug(f"{report_path=}")
             if os.path.exists(report_path):
-                self.logger.info(f"Для файла [{file_path}] был ранее сформирован отчет [{report_path}]")
+                self.logger.info(
+                    f"Для файла [{file_path}] был ранее сформирован отчет [{report_path}]"
+                )
                 return
             self.file_date = max_date
         except FileNotFoundError as exc:
             msg = str(exc)
             self.logger.error(f"Не найден путь: {msg}")
-        except Exception as exc:
-            self.logger.error(str(exc), exc_info=True)
         return file_path
 
     def calculate_report_data(self):
