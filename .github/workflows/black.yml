@@ -1,4 +1,4 @@
-name: Black linter
+name: Black linter + isort
 
 on: [push, pull_request]
 
@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: isort/isort-action@master
       - uses: psf/black@stable
         with:
             options: "--check --verbose"
