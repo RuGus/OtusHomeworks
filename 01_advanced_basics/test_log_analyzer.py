@@ -8,6 +8,7 @@ INVALID_TEST_LINE = '1.202.56.176 -  - [29/Jun/2017:03:59:15 +0300] "0" 400 166 
 
 logging.disable()
 
+
 class LogAnalyzerTest(TestCase):
     def test_get_report_name(self):
         """Тест метода get_report_name."""
