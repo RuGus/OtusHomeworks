@@ -1,6 +1,7 @@
 import logging
 from datetime import date
-from unittest import TestCase, mock, main
+from unittest import TestCase, main, mock
+
 from log_analyzer import LogAnalyzer, config
 
 VALID_TEST_LINE = '1.169.137.128 -  - [29/Jun/2017:03:50:23 +0300] "GET test_url HTTP/1.1" 200 1002 "-" "Configovod" "-" "1498697423-2118016444-4708-9752777" "712e90144abee9" 0.680'

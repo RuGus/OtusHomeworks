@@ -8,6 +8,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: isort/isort-action@master
+        with:
+            sortPaths: "./01_advanced_basics"
       - uses: psf/black@stable
         with:
             options: "--check --verbose"

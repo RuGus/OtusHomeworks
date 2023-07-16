@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import argparse
 import configparser
 import datetime
 import gzip
+import logging
 import os
 import re
-from statistics import mean, median
 import string
 import sys
-import logging
-import argparse
+from statistics import mean, median
 
 # Default config
 config = {
