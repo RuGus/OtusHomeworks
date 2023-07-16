@@ -225,6 +225,7 @@ class LogAnalyzer:
             report_path = os.path.join(report_dir, report_name)
             self.logger.debug(f"{report_path=}")
             if os.path.exists(report_path):
+                self.logger.info(f"Для файла [{file_path}] был ранее сформирован отчет [{report_path}]")
                 return
             self.file_date = max_date
         except FileNotFoundError as exc:
