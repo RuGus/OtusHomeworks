@@ -3,15 +3,27 @@ name: Black linter + isort
 on: [push, pull_request]
 
 jobs:
-  apply_linter:
+  apply_linter_01:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: isort/isort-action@master
         with:
-            sortPaths: "./01_advanced_basics"
+          sort-paths: "./01_advanced_basics"
       - uses: psf/black@stable
         with:
             options: "--check --verbose"
             src: "./01_advanced_basics"
+            version: "~= 22.0"
+  apply_linter_03:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: isort/isort-action@master
+        with:
+          sort-paths: "./03_oop"
+      - uses: psf/black@stable
+        with:
+            options: "--check --verbose"
+            src: "./03_oop"
             version: "~= 22.0"
