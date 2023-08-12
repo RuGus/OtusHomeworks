@@ -6,6 +6,7 @@ import datetime
 import hashlib
 import json
 import logging
+import re
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from optparse import OptionParser
@@ -36,36 +37,129 @@ GENDERS = {
 }
 
 
-class CharField(object):
+class ValidationError(ValueError):
     pass
 
 
-class ArgumentsField(object):
-    pass
+class Field(abc.ABC):
+    empty_values = (None, "", [], (), {})
+
+    def __init__(self, required=False, nullable=False):
+        self.required = required
+        self.nullable = nullable
+
+    def __set__(self, obj, value):
+        if value in self.empty_values:
+            self.base_validation(value)
+        elif self.is_valid(value):
+            self.value = value
+
+    def __get__(self, obj, objtype=None):
+        return self.value
+
+    def base_validation(self, value):
+        """Базовая проверка на обязательность и заполненность значения
+
+        Args:
+            value (any): значение для проверки
+        """
+        if value is None and self.required:
+            raise ValidationError("Поле обязательно для заполнения")
+        if value in self.empty_values and not self.nullable:
+            raise ValidationError("Поле не может быть пустым")
+
+    @abc.abstractmethod
+    def is_valid(self, value):
+        """Абстрактный метод валидации значения
+
+        Args:
+            value (any): значение для проверки
+        """
+        raise NotImplementedError
+
+
+class CharField(Field):
+    def is_valid(self, value):
+        if value and not isinstance(value, str):
+            raise ValidationError("Значение поля должно быть строкой")
+        return True
+
+
+class ArgumentsField(Field):
+    def is_valid(self, value):
+        if value and not isinstance(value, dict):
+            raise ValidationError("Значение поля должно быть словарем")
+        return True
 
 
 class EmailField(CharField):
-    pass
+    def is_valid(self, value):
+        regex = r"^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$"
+        if not any(super().is_valid(value), re.match(regex, value)):
+            raise ValidationError("Значение поля должно быть адресом электронной почты")
+        return True
 
 
-class PhoneField(object):
-    pass
+class PhoneField(Field):
+    def is_valid(self, value):
+        regex = r"^7\d{10}$"
+        if not isinstance(value, (str, int)) or not re.match(regex, value):
+            raise ValidationError("Значение поля должно быть номером телефона")
+        return True
 
 
-class DateField(object):
-    pass
+class DateField(Field):
+    def is_valid(self, value):
+        try:
+            datetime.datetime.strptime(value, "%d.%m.%Y")
+        except ValueError:
+            raise ValidationError('поле должно быть в формате "DD.MM.YYYY"')
+        return True
 
 
-class BirthDayField(object):
-    pass
+class BirthDayField(DateField):
+    @staticmethod
+    def date_in_range(value, min_years=0, max_years=70):
+        in_date = datetime.datetime.strptime(value, "%d.%m.%Y").date()
+        now_date = datetime.date.today()
+        date_delta = now_date.year - in_date.year
+        if min_years < date_delta < max_years:
+            return True
+        return False
+
+    def is_valid(self, value):
+        if not any(super().is_valid(value), BirthDayField.date_in_range(value)):
+            raise ValidationError("Значение поля должно быть датой не позже 70 лет")
+        return True
 
 
-class GenderField(object):
-    pass
+class GenderField(Field):
+    def is_valid(self, value):
+        if not any(isinstance(value, int), value in (0, 1, 2)):
+            raise ValidationError("Значение поля должно быть 0, 1 или 2")
+        return True
 
 
-class ClientIDsField(object):
-    pass
+class ClientIDsField(Field):
+    @staticmethod
+    def is_list_of_int(value):
+        """Проверка, что значение является списком целых чисел
+
+        Args:
+            value (any): Значение для проверки
+
+        """
+        if value and not isinstance(value, list):
+            return False
+        for item in value:
+            if item and not isinstance(value, int):
+                return False
+        return True
+
+    def is_valid(self, value):
+        if not ClientIDsField.is_list_of_int(value):
+            raise ValidationError("Значение поля должно быть списком чисел")
+        return True
 
 
 class ClientsInterestsRequest(object):
