@@ -15,5 +15,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run Tests
-        run: python test_log_analyzer.py
+        run: python test.py
         working-directory: ./03_oop
