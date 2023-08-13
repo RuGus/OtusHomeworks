@@ -27,7 +27,8 @@ def cases(cases):
 class MockStorageInvalid(Storage):
     def get(self, key):
         raise Exception("Ошибка получения данных из хранилища")
-    
+
+
 class MockStorageEmpty(Storage):
     def get(self, key):
         return None

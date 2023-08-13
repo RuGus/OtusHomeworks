@@ -2,7 +2,9 @@ import hashlib
 import json
 
 
-def get_score(store, phone, email, birthday=None, gender=None, first_name=None, last_name=None):
+def get_score(
+    store, phone, email, birthday=None, gender=None, first_name=None, last_name=None
+):
     key_parts = [
         first_name or "",
         last_name or "",
