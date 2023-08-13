@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from optparse import OptionParser
 
 from scoring import get_interests, get_score
-from store import Storage, RedisStorage
+from store import RedisStorage, Storage
 
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
@@ -319,7 +319,11 @@ def check_auth(request):
 
 
 def online_score_handler(request, store):
-    birthday = datetime.datetime.strptime(request.birthday, "%d.%m.%Y") if request.birthday else None
+    birthday = (
+        datetime.datetime.strptime(request.birthday, "%d.%m.%Y")
+        if request.birthday
+        else None
+    )
     return {
         "score": get_score(
             store=store,
