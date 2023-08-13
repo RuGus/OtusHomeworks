@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from optparse import OptionParser
 
 from scoring import get_interests, get_score
+from store import Storage, RedisStorage
 
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
@@ -72,6 +73,7 @@ class Field(abc.ABC):
             raise ValidationError("Поле обязательно для заполнения")
         if value in self.empty_values and not self.nullable:
             raise ValidationError("Поле не может быть пустым")
+        self.value = value
 
     @abc.abstractmethod
     def is_valid(self, value):
@@ -317,12 +319,13 @@ def check_auth(request):
 
 
 def online_score_handler(request, store):
+    birthday = datetime.datetime.strptime(request.birthday, "%d.%m.%Y") if request.birthday else None
     return {
         "score": get_score(
             store=store,
             phone=request.phone,
             email=request.email,
-            birthday=request.birthday,
+            birthday=birthday,
             gender=request.gender,
             first_name=request.first_name,
             last_name=request.last_name,
@@ -369,7 +372,7 @@ def method_handler(request, ctx, store):
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {"method": method_handler}
-    store = None
+    store = Storage(RedisStorage())
 
     def get_request_id(self, headers):
         return headers.get("HTTP_X_REQUEST_ID", uuid.uuid4().hex)
