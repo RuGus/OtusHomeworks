@@ -1,8 +1,9 @@
 import unittest
-from unittest.mock import patch, MagicMock
-import fakeredis
+from unittest.mock import MagicMock, patch
 
-from store import Storage, RedisStorage
+import fakeredis
+from store import RedisStorage, Storage
+
 
 class MockRedisExc(RedisStorage):
     def get(self, key):
@@ -10,15 +11,14 @@ class MockRedisExc(RedisStorage):
 
 
 class TestCache(unittest.TestCase):
-
     @patch("redis.StrictRedis", fakeredis.FakeStrictRedis)
     def test_get_raises_on_connection_error(self):
         redis_storage = MockRedisExc()
         storage = Storage(redis_storage)
-        
+
         with self.assertRaises(ConnectionError):
             storage.get("key")
-    
+
     @patch("redis.StrictRedis", fakeredis.FakeStrictRedis)
     def test_not_raises_on_connection_error(self):
         redis_storage = RedisStorage()
@@ -31,7 +31,7 @@ class TestCache(unittest.TestCase):
         redis_storage = RedisStorage()
         redis_storage.db.get = MagicMock(side_effect=ConnectionError())
         redis_storage.db.set = MagicMock(side_effect=ConnectionError())
-        
+
         storage = Storage(redis_storage)
         self.assertEqual(storage.cache_get("key"), None)
         self.assertEqual(storage.cache_set("key", "value"), None)
