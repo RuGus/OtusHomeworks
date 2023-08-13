@@ -98,11 +98,11 @@ class TestFields(unittest.TestCase):
     @cases(
         [
             [False, False, "something@bk.ru"],
-            [True, False, "somethi@ngbk.ru"],
+            [True, False, "somethi@bk.ru"],
             [True, True, ""],
-            [True, True, "somethi@ngbk.ru"],
+            [True, True, "somethi@bk.ru"],
             [False, True, ""],
-            [False, True, "someth@ingbk.ru"],
+            [False, True, "someth@bk.ru"],
         ]
     )
     def test_email_valid(self, case):
@@ -137,15 +137,15 @@ class TestFields(unittest.TestCase):
 
     @cases(
         [
-            [False, False, "79061545455"],
-            [False, False, 79061545455],
-            [True, False, "79061545455"],
-            [True, False, 79061545455],
-            [True, True, "79061545455"],
-            [True, True, 79061545455],
+            [False, False, "71234567890"],
+            [False, False, 71234567890],
+            [True, False, "71234567890"],
+            [True, False, 71234567890],
+            [True, True, "71234567890"],
+            [True, True, 71234567890],
             [False, True, None],
-            [False, True, "79061545455"],
-            [False, True, 79061545455],
+            [False, True, "71234567890"],
+            [False, True, 71234567890],
         ]
     )
     def test_phone_valid(self, case):
@@ -156,20 +156,20 @@ class TestFields(unittest.TestCase):
 
     @cases(
         [
-            [False, False, "89061545455"],
+            [False, False, "81234567890"],
             [False, False, ""],
             [False, False, None],
-            [False, False, 9055555555],
+            [False, False, 1234567890],
             [False, False, {}],
             [False, False, {"key": "value"}],
-            [True, False, "89061545455"],
+            [True, False, "81234567890"],
             [True, False, ""],
             [True, False, None],
-            [True, False, 9055555555],
+            [True, False, 1234567890],
             [True, False, {}],
             [True, False, {"key": "value"}],
             [True, True, None],
-            [True, True, 89061545455],
+            [True, True, 81234567890],
             [True, True, {"key": "value"}],
         ]
     )
@@ -198,14 +198,14 @@ class TestFields(unittest.TestCase):
 
     @cases(
         [
-            [False, False, "10/10/2022"],
+            [False, False, "18/05/1999"],
             [False, False, None],
             [False, False, ""],
-            [True, False, "10-10-2023"],
+            [True, False, "10-12-2023"],
             [True, False, ""],
-            [True, False, "2022"],
-            [True, True, "10.2024"],
-            [False, True, "10.10..2025"],
+            [True, False, "2021"],
+            [True, True, "10.2021"],
+            [False, True, "01.01..2020"],
         ]
     )
     def test_date_invalid(self, case):
@@ -216,13 +216,13 @@ class TestFields(unittest.TestCase):
 
     @cases(
         [
-            [False, False, "10.10.2022"],
-            [True, False, "10.10.2023"],
+            [False, False, "01.01.2020"],
+            [True, False, "01.01.2020"],
             [True, True, ""],
-            [True, True, "10.10.2024"],
+            [True, True, "01.01.2020"],
             [False, True, ""],
             [False, True, None],
-            [False, True, "10.10.2025"],
+            [False, True, "01.01.2020"],
         ]
     )
     def test_bdate_valid(self, case):
@@ -233,21 +233,21 @@ class TestFields(unittest.TestCase):
 
     @cases(
         [
-            [False, False, "10/10/2022"],
-            [False, False, "10.10.1950"],
+            [False, False, "18/05/1999"],
+            [False, False, "33.10.1999"],
             [False, False, None],
             [False, False, ""],
-            [True, False, "10-10-2023"],
-            [True, False, "10.10.1951"],
+            [True, False, "11-11-2023"],
+            [True, False, "09.08.1951"],
             [True, False, ""],
             [True, False, "2022"],
             [True, True, "10.2024"],
-            [True, True, "10.10.1951"],
-            [False, True, "10.10..2025"],
-            [False, True, "10.10.1951"],
+            [True, True, "09.08.1951"],
+            [False, True, "09.08.1951"],
+            [False, True, "09.08.1951"],
         ]
     )
-    def test_bdate_invalid(self, case):
+    def test_birth_date_invalid(self, case):
         required, nullable, value = case
         test_field = api.BirthDayField(required, nullable)
         with self.assertRaises(api.ValidationError):
@@ -273,18 +273,18 @@ class TestFields(unittest.TestCase):
     @cases(
         [
             [False, False, ""],
-            [False, False, 8],
+            [False, False, -1],
             [False, False, None],
-            [False, False, "rty"],
+            [False, False, "no man"],
             [True, False, ""],
-            [True, False, 5],
+            [True, False, -1],
             [True, False, None],
-            [True, False, "2022"],
-            [True, True, 5],
+            [True, False, "alien"],
+            [True, True, -1],
             [True, True, None],
-            [True, True, "2022"],
-            [False, True, 5],
-            [False, True, "2022"],
+            [True, True, "alien"],
+            [False, True, -1],
+            [False, True, "alien"],
         ]
     )
     def test_gender_invalid(self, case):
@@ -295,7 +295,7 @@ class TestFields(unittest.TestCase):
 
     @cases(
         [
-            [False, False, [2022]],
+            [False, False, [1]],
             [True, False, [1, 2]],
             [True, True, [1, 2]],
             [False, True, [1, 2]],
@@ -310,17 +310,17 @@ class TestFields(unittest.TestCase):
 
     @cases(
         [
-            [False, False, "10/10/2022"],
+            [False, False, "18/05/1999"],
             [False, False, None],
-            [False, False, 45],
-            [True, False, "10/10/2022"],
+            [False, False, 123],
+            [True, False, "18/05/1999"],
             [True, False, None],
-            [True, False, 45],
-            [True, True, "10/10/2022"],
+            [True, False, 123],
+            [True, True, "18/05/1999"],
             [True, True, None],
-            [True, True, 45],
-            [False, True, "10/10/2022"],
-            [False, True, 45],
+            [True, True, 123],
+            [False, True, "18/05/1999"],
+            [False, True, 123],
         ]
     )
     def test_id_invalid(self, case):

@@ -24,6 +24,15 @@ def cases(cases):
     return decorator
 
 
+class MockStorageInvalid(Storage):
+    def get(self, key):
+        raise Exception("Ошибка получения данных из хранилища")
+    
+class MockStorageEmpty(Storage):
+    def get(self, key):
+        return None
+
+
 class TestAPI(unittest.TestCase):
     def setUp(self):
         self.context = {}
@@ -229,10 +238,86 @@ class TestAPI(unittest.TestCase):
             "arguments": arguments,
         }
         self.set_valid_auth(request)
+        self.store = MockStorageEmpty(RedisStorage())
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code, arguments)
         self.assertEqual(len(arguments["client_ids"]), len(response))
         self.assertEqual(self.context.get("nclients"), len(arguments["client_ids"]))
+
+    @cases(
+        [
+            {
+                "phone": "79175002040",
+                "email": "stupnikov@otus.ru",
+                "gender": 1,
+                "birthday": "01.01.2000",
+                "first_name": "a",
+                "last_name": "b",
+            },
+        ]
+    )
+    def test_score_ok_storage(self, arguments):
+        request = {
+            "account": "horns&hoofs",
+            "login": "h&f",
+            "method": "online_score",
+            "arguments": arguments,
+        }
+
+        test_store = Storage(RedisStorage())
+        score = 5.0
+        test_store.cache_set("uid:dceedd618e2a233dfdaf80d99d6c3452", score, 60 * 60)
+
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        score_ = response.get("score")
+        self.assertEqual(float(score_), score)
+
+    @cases(
+        [
+            {
+                "phone": "79175002040",
+                "email": "stupnikov@otus.ru",
+                "gender": 1,
+                "birthday": "01.01.2000",
+                "first_name": "a",
+                "last_name": "b",
+            },
+        ]
+    )
+    def test_score_invalid_storage(self, arguments):
+        request = {
+            "account": "horns&hoofs",
+            "login": "h&f",
+            "method": "online_score",
+            "arguments": arguments,
+        }
+        self.store = MockStorageInvalid(RedisStorage())
+        score = 5.0
+
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        score_ = response.get("score")
+        self.assertEqual(float(score_), score)
+
+    @cases(
+        [
+            {"client_ids": [1, 2], "date": "19.07.2017"},
+        ]
+    )
+    def test_interests_invalid_storage(self, arguments):
+        request = {
+            "account": "horns&hoofs",
+            "login": "h&f",
+            "method": "clients_interests",
+            "arguments": arguments,
+        }
+
+        self.store = MockStorageInvalid(RedisStorage())
+
+        self.set_valid_auth(request)
+        with self.assertRaises(Exception):
+            self.get_response(request)
 
 
 if __name__ == "__main__":

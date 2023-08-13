@@ -27,3 +27,15 @@ jobs:
             options: "--check --verbose"
             src: "./03_oop"
             version: "~= 22.0"
+  apply_linter_04:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: isort/isort-action@master
+        with:
+          sort-paths: "./04_testing"
+      - uses: psf/black@stable
+        with:
+            options: "--check --verbose"
+            src: "./04_testing"
+            version: "~= 22.0"

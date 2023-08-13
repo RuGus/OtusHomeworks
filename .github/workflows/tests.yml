@@ -17,3 +17,10 @@ jobs:
       - name: Run Tests
         run: python test.py
         working-directory: ./03_oop
+  run_tests_04:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Tests
+        run: python -m unittest
+        working-directory: ./04_testing
