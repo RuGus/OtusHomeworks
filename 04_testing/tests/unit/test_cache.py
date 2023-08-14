@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import fakeredis
-from store import RedisStorage, Storage
+from src.store import RedisStorage, Storage
 
 
 class MockRedisExc(RedisStorage):

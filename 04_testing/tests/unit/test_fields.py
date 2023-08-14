@@ -1,7 +1,7 @@
 import functools
 import unittest
 
-import api
+from src import api
 
 
 def cases(cases):

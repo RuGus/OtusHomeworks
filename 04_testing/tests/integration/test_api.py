@@ -3,8 +3,8 @@ import functools
 import hashlib
 import unittest
 
-import api
-from store import RedisStorage, Storage
+from src import api
+from src.store import RedisStorage, Storage
 
 
 def cases(cases):

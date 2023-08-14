@@ -11,8 +11,8 @@ import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from optparse import OptionParser
 
-from scoring import get_interests, get_score
-from store import RedisStorage, Storage
+from src.scoring import get_interests, get_score
+from src.store import RedisStorage, Storage
 
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
