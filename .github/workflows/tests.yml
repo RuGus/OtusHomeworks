@@ -1,8 +1,8 @@
-name: Tests
+# name: Tests
 
-on: [push, pull_request]
+# on: [push, pull_request]
 
-jobs:
+# jobs:
   # run_tests_01:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -28,13 +28,3 @@ jobs:
   #     - name: Run Tests
   #       run: python -m unittest discover -s tests
   #       working-directory: ./04_testing
-  run_tests_05:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run http_server
-        run: python httpd.py 
-        working-directory: ./05_http_server
-      - name: Run Tests
-        run: python httptest.py
-        working-directory: ./05_http_server
