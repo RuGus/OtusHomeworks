@@ -3,28 +3,38 @@ name: Tests
 on: [push, pull_request]
 
 jobs:
-  run_tests_01:
+  # run_tests_01:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Run Tests
+  #       run: python test_log_analyzer.py
+  #       working-directory: ./01_advanced_basics
+  # run_tests_03:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Run Tests
+  #       run: python test.py
+  #       working-directory: ./03_oop
+  # run_tests_04:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install redis fakeredis
+  #     - name: Run Tests
+  #       run: python -m unittest discover -s tests
+  #       working-directory: ./04_testing
+  run_tests_05:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Run http_server
+        run: python httpd.py 
+        working-directory: ./05_automatization
       - name: Run Tests
-        run: python test_log_analyzer.py
-        working-directory: ./01_advanced_basics
-  run_tests_03:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run Tests
-        run: python test.py
-        working-directory: ./03_oop
-  run_tests_04:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install redis fakeredis
-      - name: Run Tests
-        run: python -m unittest discover -s tests
-        working-directory: ./04_testing
+        run: python httptest.py
+        working-directory: ./05_automatization

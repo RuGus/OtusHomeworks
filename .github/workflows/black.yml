@@ -3,39 +3,51 @@ name: Black linter + isort
 on: [push, pull_request]
 
 jobs:
-  apply_linter_01:
+  # apply_linter_01:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: isort/isort-action@master
+  #       with:
+  #         sort-paths: "./01_advanced_basics"
+  #     - uses: psf/black@stable
+  #       with:
+  #           options: "--check --verbose"
+  #           src: "./01_advanced_basics"
+  #           version: "~= 22.0"
+  # apply_linter_03:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: isort/isort-action@master
+  #       with:
+  #         sort-paths: "./03_oop"
+  #     - uses: psf/black@stable
+  #       with:
+  #           options: "--check --verbose"
+  #           src: "./03_oop"
+  #           version: "~= 22.0"
+  # apply_linter_04:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: isort/isort-action@master
+  #       with:
+  #         sort-paths: "./04_testing"
+  #     - uses: psf/black@stable
+  #       with:
+  #           options: "--check --verbose"
+  #           src: "./04_testing"
+  #           version: "~= 22.0"
+  apply_linter_05:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: isort/isort-action@master
         with:
-          sort-paths: "./01_advanced_basics"
+          sort-paths: "./05_automatization"
       - uses: psf/black@stable
         with:
             options: "--check --verbose"
-            src: "./01_advanced_basics"
-            version: "~= 22.0"
-  apply_linter_03:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: isort/isort-action@master
-        with:
-          sort-paths: "./03_oop"
-      - uses: psf/black@stable
-        with:
-            options: "--check --verbose"
-            src: "./03_oop"
-            version: "~= 22.0"
-  apply_linter_04:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: isort/isort-action@master
-        with:
-          sort-paths: "./04_testing"
-      - uses: psf/black@stable
-        with:
-            options: "--check --verbose"
-            src: "./04_testing"
+            src: "./05_automatization"
             version: "~= 22.0"
