@@ -1,6 +1,9 @@
-import argparse
-from http_server import SimpleWebServer, WORKER_COUNT, ROOT_FILE_DIR
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
+import argparse
+
+from http_server import ROOT_FILE_DIR, WORKER_COUNT, SimpleWebServer
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
