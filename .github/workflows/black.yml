@@ -39,15 +39,27 @@ jobs:
   #           options: "--check --verbose"
   #           src: "./04_testing"
   #           version: "~= 22.0"
-  apply_linter_05:
+  # apply_linter_05:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: isort/isort-action@master
+  #       with:
+  #         sort-paths: "./05_http_server"
+  #     - uses: psf/black@stable
+  #       with:
+  #           options: "--check --verbose"
+  #           src: "./05_http_server"
+  #           version: "~= 22.0"
+  apply_linter_09:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: isort/isort-action@master
         with:
-          sort-paths: "./05_http_server"
+          sort-paths: "./09_memc_load"
       - uses: psf/black@stable
         with:
             options: "--check --verbose"
-            src: "./05_http_server"
+            src: "./09_memc_load"
             version: "~= 22.0"

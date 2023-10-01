@@ -3,13 +3,13 @@ name: Tests
 on: [push, pull_request]
 
 jobs:
-  run_tests_01:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run Tests
-        run: python test_log_analyzer.py
-        working-directory: ./01_advanced_basics
+  # run_tests_01:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Run Tests
+  #       run: python test_log_analyzer.py
+  #       working-directory: ./01_advanced_basics
   # run_tests_03:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -28,3 +28,10 @@ jobs:
   #     - name: Run Tests
   #       run: python -m unittest discover -s tests
   #       working-directory: ./04_testing
+  run_tests_09:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Tests
+        run: python memc_load_mp.py -t
+        working-directory: ./09_memc_load
