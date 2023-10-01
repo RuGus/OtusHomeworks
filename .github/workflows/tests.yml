@@ -35,7 +35,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install protobuf==3.20.1      
+          pip install protobuf==3.20.1 python-memcached==1.59
       - name: Run Tests
         run: python memc_load_mp.py -t
         working-directory: ./09_memc_load
