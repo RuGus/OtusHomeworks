@@ -43,7 +43,7 @@ def dot_rename(path):
     os.rename(path, os.path.join(head, "." + fn))
 
 
-def insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run=False):
+def insert_appsinstalled(memc_pool, memc_client, appsinstalled, dry_run=False):
     """Запись данных в кеш.
 
     Args:
@@ -64,15 +64,13 @@ def insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run=False):
     try:
         if dry_run:
             value = str(ua).replace("\n", " ")
-            logging.debug(f"[{memc_addr}]:[{key}] -> {value}")
+            logging.debug(f"[{memc_client}]:[{key}] -> {value}")
         else:
             try:
                 memc = memc_pool.get(timeout=config["GET_POOL_TIMEOUT"])
             except Empty:
-                logging.debug("Queue is empty")
-                memc = memcache.Client(
-                    [memc_addr], socket_timeout=config["MEMC_TIMEOUT"]
-                )
+                logging.warning(f"Queue is empty [{memc_pool}]")
+                memc = memc_client
             ok = False
             for retry_num in range(1, config["MEMC_MAX_RETRIES"]):
                 ok = memc.set(key, packed)
@@ -83,7 +81,7 @@ def insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run=False):
             memc_pool.put(memc)
             return ok
     except Exception as e:
-        logging.exception("Cannot write to memc %s: %s" % (memc_addr, e))
+        logging.exception("Cannot write to memc %s: %s" % (memc_client, e))
         return False
     return True
 
@@ -119,7 +117,7 @@ def handle_insert_appsinstalled(job_queue, result_queue):
     """Обработчик задания записи в кеш
 
     Args:
-        job_queue (Queue): Очередб=ь с заданий
+        job_queue (Queue): Очередь с заданий
         result_queue (Queue): Очередь результатов
     """
     processed = errors = 0
@@ -131,12 +129,24 @@ def handle_insert_appsinstalled(job_queue, result_queue):
             result_queue.put((processed, errors))
             return
 
-        memc_pool, memc_addr, appsinstalled, dry_run = task
-        ok = insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run)
+        memc_pool, memc_client, appsinstalled, dry_run = task
+        ok = insert_appsinstalled(memc_pool, memc_client, appsinstalled, dry_run)
         if ok:
             processed += 1
         else:
             errors += 1
+
+
+def get_memc_clients(device_memc):
+
+    memc_clients = {}
+    for key, value in device_memc.items():
+        if value:
+            memc_clients[key] = memcache.Client(
+                [value],
+                socket_timeout=config["MEMC_TIMEOUT"],
+            )
+    return memc_clients
 
 
 def handle_logfile(fn, options):
@@ -155,6 +165,7 @@ def handle_logfile(fn, options):
         "adid": options.adid,
         "dvid": options.dvid,
     }
+    memc_clients = get_memc_clients(device_memc)
 
     pools = collections.defaultdict(Queue)
     job_queue = Queue(maxsize=config["MAX_JOB_QUEUE_SIZE"])
@@ -175,27 +186,32 @@ def handle_logfile(fn, options):
     processed = errors = 0
     logging.info("Processing %s" % fn)
 
-    with gzip.open(fn, "rt") as fd:
-        for line in fd:
-            line = line.strip()
-            if not line:
-                continue
+    try:
+        with gzip.open(fn, "rt") as fd:
+            for line in fd:
+                line = line.strip()
+                if not line:
+                    continue
 
-            appsinstalled = parse_appsinstalled(line)
-            if not appsinstalled:
-                errors += 1
-                continue
+                appsinstalled = parse_appsinstalled(line)
+                if not appsinstalled:
+                    errors += 1
+                    continue
 
-            memc_addr = device_memc.get(appsinstalled.dev_type)
-            if not memc_addr:
-                errors += 1
-                logging.error("Unknow device type: %s" % appsinstalled.dev_type)
-                continue
+                memc_addr = device_memc.get(appsinstalled.dev_type)
+                if not memc_addr:
+                    errors += 1
+                    logging.error("Unknow device type: %s" % appsinstalled.dev_type)
+                    continue
+                memc_client = memc_clients.get(appsinstalled.dev_type)
+                
+                job_queue.put((pools[memc_addr], memc_client, appsinstalled, options.dry))
 
-            job_queue.put((pools[memc_addr], memc_addr, appsinstalled, options.dry))
-
-            if not all(thread.is_alive() for thread in workers):
-                break
+                if not all(thread.is_alive() for thread in workers):
+                    break
+    except Exception as exc:
+        logging.error("File read error: %s" % str(exc))
+        return fn
 
     for thread in workers:
         if thread.is_alive():
