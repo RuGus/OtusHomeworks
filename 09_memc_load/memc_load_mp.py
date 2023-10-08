@@ -27,11 +27,12 @@ config = {
     "MAX_RESULT_QUEUE_SIZE": 0,
     "THREADS_PER_WORKER": 4,
     "MEMC_BACKOFF_FACTOR": 0.3,
-    "GET_POOL_TIMEOUT": 0.1,
-    "GET_JOB_TIMEOUT": 0.1,
+    "GET_JOB_TIMEOUT": 1,
+    "LINES_COUNT_IN_BATCH": 5000,
 }
 
 CLIENTS = {}
+DEVICE_MEMC = {}
 
 
 def dot_rename(path):
@@ -45,49 +46,30 @@ def dot_rename(path):
     os.rename(path, os.path.join(head, "." + fn))
 
 
-def insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run=False):
-    """Запись данных в кеш.
+def insert_appsinstalled(dev_type, batch, dry_run=False):
+    """Запись пачки данных в кеш.
 
     Args:
-        memc_pool (Queue): Очередь обработки кеша
-        memc_addr (str): Адрес для вставки
-        appsinstalled (AppsInstalled): Данные для записи
-        dry_run (bool, optional): Фланг необходимости доп. логирования.
-
-    Returns:
-        bool: Результат записи данных в кеш
+        dev_type (str): Тип устройства (идентификатор)
+        batch (dict): Пачка данных для записи в кеш
+        dry_run (bool, optional): Флаг необходимости доп. логирования.
     """
-    ua = appsinstalled_pb2.UserApps()
-    ua.lat = appsinstalled.lat
-    ua.lon = appsinstalled.lon
-    key = "%s:%s" % (appsinstalled.dev_type, appsinstalled.dev_id)
-    ua.apps.extend(appsinstalled.apps)
-    packed = ua.SerializeToString()
     try:
-        memc_client = CLIENTS[appsinstalled.dev_type]
+        memc_client = CLIENTS[dev_type]
+        memc_addr = DEVICE_MEMC[dev_type]
         if dry_run:
-            value = str(ua).replace("\n", " ")
-            
-            logging.debug(f"[{memc_client}]:[{key}] -> {value}")
-        else:
-            try:
-                memc = memc_pool.get(timeout=config["GET_POOL_TIMEOUT"])
-            except Empty:
-                logging.warning(f"Queue is empty [{memc_pool}]")
-                memc = memc_client
-            ok = False
-            for retry_num in range(1, config["MEMC_MAX_RETRIES"]):
-                ok = memc.set(key, packed)
-                if ok:
-                    break
-                backoff_value = config["MEMC_BACKOFF_FACTOR"] * (2**retry_num)
-                time.sleep(backoff_value)
-            memc_pool.put(memc)
-            return ok
-    except Exception as e:
-        logging.exception("Cannot write to memc %s: %s" % (memc_client, e))
-        return False
-    return True
+            logging.debug(f"[{memc_addr}]:[{dev_type}] Write [{len(batch)}] records")
+        ok = False
+        for retry_num in range(1, config["MEMC_MAX_RETRIES"]):
+            ok = memc_client.set_multi(batch)
+            if ok:
+                break
+            backoff_value = config["MEMC_BACKOFF_FACTOR"] * (2**retry_num)
+            time.sleep(backoff_value)
+    except Exception as exc:
+        err_msg = f"Cannot write to memc {memc_addr}: {exc}"
+        logging.exception(err_msg)
+        raise RuntimeError(err_msg)
 
 
 def parse_appsinstalled(line):
@@ -117,28 +99,64 @@ def parse_appsinstalled(line):
     return AppsInstalled(dev_type, dev_id, lat, lon, apps)
 
 
-def handle_insert_appsinstalled(job_queue, result_queue):
+def add_appsinstalled_to_batch(appsinstalled, collector):
+    """Добавить запись в пакет загрузки
+
+    Args:
+        appsinstalled (AppsInstalled): Запись кеша
+        collector (dict): Накопитель записей
+    """
+    ua = appsinstalled_pb2.UserApps()
+    ua.lat = appsinstalled.lat
+    ua.lon = appsinstalled.lon
+    key = "%s:%s" % (appsinstalled.dev_type, appsinstalled.dev_id)
+    ua.apps.extend(appsinstalled.apps)
+    packed = ua.SerializeToString()
+    dev_type = appsinstalled.dev_type
+    write_value = {key: packed}
+    if collector.get(dev_type):
+        collector[dev_type].update(write_value)
+    else:
+        collector[dev_type] = write_value
+
+
+def handle_insert_appsinstalled(job_queue, result_queue, dry_run):
     """Обработчик задания записи в кеш
 
     Args:
         job_queue (Queue): Очередь с заданий
         result_queue (Queue): Очередь результатов
     """
-    processed = errors = 0
+    processed = errors = collected = 0
+    collector = {}
+    is_queue_emty = False
     while True:
         try:
             task = job_queue.get(timeout=config["GET_JOB_TIMEOUT"])
         except Empty:
             logging.debug("Job queue is empty")
+            is_queue_emty = True
+        except Exception as exc:
+            logging.error(f"Error in handle insert appsinstalled: {str(exc)}")
+        if not is_queue_emty:
+            appsinstalled = task
+            add_appsinstalled_to_batch(appsinstalled, collector)
+            collected += 1
+
+        if collected >= config["LINES_COUNT_IN_BATCH"] or (is_queue_emty and collected):
+            for dev_type, batch in collector.items():
+                try:
+                    insert_appsinstalled(dev_type, batch, dry_run)
+                except Exception as exc:
+                    errors += len(batch)
+                    logging.error(f"Batch insert error: {str(exc)}")
+                else:
+                    processed += len(batch)
+            collected = 0
+            collector.clear()
+        if is_queue_emty:
             result_queue.put((processed, errors))
             return
-
-        memc_pool, memc_addr, appsinstalled, dry_run = task
-        ok = insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run)
-        if ok:
-            processed += 1
-        else:
-            errors += 1
 
 
 def create_memc_clients(options):
@@ -148,12 +166,16 @@ def create_memc_clients(options):
         options (dict): Словарь с опциями обработки
     """
     logging.info("Create memcache clients")
+
     device_memc = {
         "idfa": options.idfa,
         "gaid": options.gaid,
         "adid": options.adid,
         "dvid": options.dvid,
     }
+    global DEVICE_MEMC
+    global CLIENTS
+    DEVICE_MEMC = device_memc
     for key, value in device_memc.items():
         if value:
             logging.info(f"Create client [{key}] on [{value}]")
@@ -173,14 +195,6 @@ def handle_logfile(fn, options):
     Returns:
         str: Путь до обработанного файла слогами
     """
-    device_memc = {
-        "idfa": options.idfa,
-        "gaid": options.gaid,
-        "adid": options.adid,
-        "dvid": options.dvid,
-    }
-
-    pools = collections.defaultdict(Queue)
     job_queue = Queue(maxsize=config["MAX_JOB_QUEUE_SIZE"])
     result_queue = Queue(maxsize=config["MAX_RESULT_QUEUE_SIZE"])
 
@@ -188,7 +202,7 @@ def handle_logfile(fn, options):
     for i in range(config["THREADS_PER_WORKER"]):
         thread = threading.Thread(
             target=handle_insert_appsinstalled,
-            args=(job_queue, result_queue),
+            args=(job_queue, result_queue, options.dry),
         )
         thread.daemon = True
         workers.append(thread)
@@ -211,13 +225,13 @@ def handle_logfile(fn, options):
                     errors += 1
                     continue
 
-                memc_addr = device_memc.get(appsinstalled.dev_type)
+                memc_addr = DEVICE_MEMC.get(appsinstalled.dev_type)
                 if not memc_addr:
                     errors += 1
                     logging.error("Unknow device type: %s" % appsinstalled.dev_type)
                     continue
 
-                job_queue.put((pools[memc_addr], memc_addr, appsinstalled, options.dry))
+                job_queue.put(appsinstalled)
 
                 if not all(thread.is_alive() for thread in workers):
                     break
