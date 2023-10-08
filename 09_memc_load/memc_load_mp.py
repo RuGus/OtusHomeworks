@@ -31,6 +31,8 @@ config = {
     "GET_JOB_TIMEOUT": 0.1,
 }
 
+CLIENTS = {}
+
 
 def dot_rename(path):
     """Добавление префикса "." к имени файла.
@@ -43,7 +45,7 @@ def dot_rename(path):
     os.rename(path, os.path.join(head, "." + fn))
 
 
-def insert_appsinstalled(memc_pool, memc_client, appsinstalled, dry_run=False):
+def insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run=False):
     """Запись данных в кеш.
 
     Args:
@@ -62,8 +64,10 @@ def insert_appsinstalled(memc_pool, memc_client, appsinstalled, dry_run=False):
     ua.apps.extend(appsinstalled.apps)
     packed = ua.SerializeToString()
     try:
+        memc_client = CLIENTS[appsinstalled.dev_type]
         if dry_run:
             value = str(ua).replace("\n", " ")
+            
             logging.debug(f"[{memc_client}]:[{key}] -> {value}")
         else:
             try:
@@ -129,24 +133,34 @@ def handle_insert_appsinstalled(job_queue, result_queue):
             result_queue.put((processed, errors))
             return
 
-        memc_pool, memc_client, appsinstalled, dry_run = task
-        ok = insert_appsinstalled(memc_pool, memc_client, appsinstalled, dry_run)
+        memc_pool, memc_addr, appsinstalled, dry_run = task
+        ok = insert_appsinstalled(memc_pool, memc_addr, appsinstalled, dry_run)
         if ok:
             processed += 1
         else:
             errors += 1
 
 
-def get_memc_clients(device_memc):
+def create_memc_clients(options):
+    """Создание подключений (clients) к memcahe
 
-    memc_clients = {}
+    Args:
+        options (dict): Словарь с опциями обработки
+    """
+    logging.info("Create memcache clients")
+    device_memc = {
+        "idfa": options.idfa,
+        "gaid": options.gaid,
+        "adid": options.adid,
+        "dvid": options.dvid,
+    }
     for key, value in device_memc.items():
         if value:
-            memc_clients[key] = memcache.Client(
+            logging.info(f"Create client [{key}] on [{value}]")
+            CLIENTS[key] = memcache.Client(
                 [value],
                 socket_timeout=config["MEMC_TIMEOUT"],
             )
-    return memc_clients
 
 
 def handle_logfile(fn, options):
@@ -165,7 +179,6 @@ def handle_logfile(fn, options):
         "adid": options.adid,
         "dvid": options.dvid,
     }
-    memc_clients = get_memc_clients(device_memc)
 
     pools = collections.defaultdict(Queue)
     job_queue = Queue(maxsize=config["MAX_JOB_QUEUE_SIZE"])
@@ -203,9 +216,8 @@ def handle_logfile(fn, options):
                     errors += 1
                     logging.error("Unknow device type: %s" % appsinstalled.dev_type)
                     continue
-                memc_client = memc_clients.get(appsinstalled.dev_type)
-                
-                job_queue.put((pools[memc_addr], memc_client, appsinstalled, options.dry))
+
+                job_queue.put((pools[memc_addr], memc_addr, appsinstalled, options.dry))
 
                 if not all(thread.is_alive() for thread in workers):
                     break
@@ -236,6 +248,7 @@ def handle_logfile(fn, options):
 
 def main(options):
     logging.info("Started cache upload process")
+    create_memc_clients(options)
     num_processes = mp.cpu_count()
     logging.info(f"Multiprocessing with {num_processes=}")
     pool = mp.Pool(processes=num_processes)
